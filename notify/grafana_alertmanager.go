@@ -455,8 +455,11 @@ func TestReceivers(
 	// All receivers that need to be sent test notifications
 	jobs := make([]job, 0, len(c.Receivers))
 
+	fmt.Println("Manty1")
+
 	for _, receiver := range c.Receivers {
 		for _, intg := range receiver.Integrations {
+			fmt.Printf("Manty2 %v \n", intg)
 			// Create an APIReceiver with a single integration so we
 			// can identify invalid receiver integration configs
 			singleIntReceiver := &APIReceiver{
@@ -466,12 +469,15 @@ func TestReceivers(
 			}
 			integrations, err := buildIntegrationsFunc(singleIntReceiver, tmpl)
 			if err != nil || len(integrations) == 0 {
+				fmt.Println("Manty3")
 				invalid = append(invalid, result{
 					Config:       intg,
 					ReceiverName: intg.Name,
 					Error:        err,
 				})
+				fmt.Printf("Manty3 %v \n", invalid)
 			} else {
+				fmt.Println("Manty4")
 				jobs = append(jobs, job{
 					Config:       intg,
 					ReceiverName: receiver.Name,
@@ -482,11 +488,14 @@ func TestReceivers(
 	}
 
 	if len(invalid)+len(jobs) == 0 {
+		fmt.Println("Manty5")
 		return nil, 0, ErrNoReceivers
 	}
 
 	if len(jobs) == 0 {
+		fmt.Println("Manty6")
 		res, status := newTestReceiversResult(testAlert, invalid, c.Receivers, now)
+		fmt.Printf("Manty7 %v %v \n", res, status)
 		return res, status, nil
 	}
 

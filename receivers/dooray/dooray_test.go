@@ -30,7 +30,7 @@ func TestNotify(t *testing.T) {
 	}{{
 		name: "Message is sent",
 		settings: Config{
-			Url:     "https://example.com/hooks/xxxx",
+			Url:     "https://nhnent.dooray.com/services/3036349505739914786/3200968459962558160/WVTXtB-pT3egHjsrssgC2Q",
 			Title:   templates.DefaultMessageTitleEmbed,
 			IconURL: "",
 		},
@@ -52,86 +52,86 @@ func TestNotify(t *testing.T) {
 			},
 		},
 	},
-	//{
-	//	name: "Message is sent with image URL",
-	//	settings: Config{
-	//		EndpointURL:    APIURL,
-	//		URL:            "https://example.com/hooks/xxxx",
-	//		Token:          "",
-	//		Recipient:      "#test",
-	//		Text:           templates.DefaultMessageEmbed,
-	//		Title:          templates.DefaultMessageTitleEmbed,
-	//		Username:       "Grafana",
-	//		IconEmoji:      ":emoji:",
-	//		IconURL:        "",
-	//		MentionChannel: "",
-	//		MentionUsers:   nil,
-	//		MentionGroups:  nil,
-	//	},
-	//	alerts: []*types.Alert{{
-	//		Alert: model.Alert{
-	//			Labels:      model.LabelSet{"alertname": "alert1", "lbl1": "val1"},
-	//			Annotations: model.LabelSet{"ann1": "annv1", "__dashboardUid__": "abcd", "__panelId__": "efgh", "__alertImageToken__": "image-with-url"},
-	//		},
-	//	}},
-	//	expectedMessage: &slackMessage{
-	//		Channel:   "#test",
-	//		Username:  "Grafana",
-	//		IconEmoji: ":emoji:",
-	//		Attachments: []attachment{
-	//			{
-	//				Title:      "[FIRING:1]  (val1)",
-	//				TitleLink:  "http://localhost/alerting/list",
-	//				Text:       "**Firing**\n\nValue: [no value]\nLabels:\n - alertname = alert1\n - lbl1 = val1\nAnnotations:\n - ann1 = annv1\nSilence: http://localhost/alerting/silence/new?alertmanager=grafana&matcher=alertname%3Dalert1&matcher=lbl1%3Dval1\nDashboard: http://localhost/d/abcd\nPanel: http://localhost/d/abcd?viewPanel=efgh\n",
-	//				Fallback:   "[FIRING:1]  (val1)",
-	//				Fields:     nil,
-	//				Footer:     "Grafana v" + appVersion,
-	//				FooterIcon: "https://grafana.com/static/assets/img/fav32.png",
-	//				Color:      "#D63232",
-	//				ImageURL:   "https://www.example.com/test.png",
-	//			},
-	//		},
-	//	},
-	//}, {
-	//	name: "Message is sent and image on local disk is ignored",
-	//	settings: Config{
-	//		EndpointURL:    APIURL,
-	//		URL:            "https://example.com/hooks/xxxx",
-	//		Token:          "",
-	//		Recipient:      "#test",
-	//		Text:           templates.DefaultMessageEmbed,
-	//		Title:          templates.DefaultMessageTitleEmbed,
-	//		Username:       "Grafana",
-	//		IconEmoji:      ":emoji:",
-	//		IconURL:        "",
-	//		MentionChannel: "",
-	//		MentionUsers:   nil,
-	//		MentionGroups:  nil,
-	//	},
-	//	alerts: []*types.Alert{{
-	//		Alert: model.Alert{
-	//			Labels:      model.LabelSet{"alertname": "alert1", "lbl1": "val1"},
-	//			Annotations: model.LabelSet{"ann1": "annv1", "__dashboardUid__": "abcd", "__panelId__": "efgh", "__alertImageToken__": "image-on-disk"},
-	//		},
-	//	}},
-	//	expectedMessage: &slackMessage{
-	//		Channel:   "#test",
-	//		Username:  "Grafana",
-	//		IconEmoji: ":emoji:",
-	//		Attachments: []attachment{
-	//			{
-	//				Title:      "[FIRING:1]  (val1)",
-	//				TitleLink:  "http://localhost/alerting/list",
-	//				Text:       "**Firing**\n\nValue: [no value]\nLabels:\n - alertname = alert1\n - lbl1 = val1\nAnnotations:\n - ann1 = annv1\nSilence: http://localhost/alerting/silence/new?alertmanager=grafana&matcher=alertname%3Dalert1&matcher=lbl1%3Dval1\nDashboard: http://localhost/d/abcd\nPanel: http://localhost/d/abcd?viewPanel=efgh\n",
-	//				Fallback:   "[FIRING:1]  (val1)",
-	//				Fields:     nil,
-	//				Footer:     "Grafana v" + appVersion,
-	//				FooterIcon: "https://grafana.com/static/assets/img/fav32.png",
-	//				Color:      "#D63232",
-	//			},
-	//		},
-	//	},
-	//}
+		//{
+		//	name: "Message is sent with image URL",
+		//	settings: Config{
+		//		EndpointURL:    APIURL,
+		//		URL:            "https://example.com/hooks/xxxx",
+		//		Token:          "",
+		//		Recipient:      "#test",
+		//		Text:           templates.DefaultMessageEmbed,
+		//		Title:          templates.DefaultMessageTitleEmbed,
+		//		Username:       "Grafana",
+		//		IconEmoji:      ":emoji:",
+		//		IconURL:        "",
+		//		MentionChannel: "",
+		//		MentionUsers:   nil,
+		//		MentionGroups:  nil,
+		//	},
+		//	alerts: []*types.Alert{{
+		//		Alert: model.Alert{
+		//			Labels:      model.LabelSet{"alertname": "alert1", "lbl1": "val1"},
+		//			Annotations: model.LabelSet{"ann1": "annv1", "__dashboardUid__": "abcd", "__panelId__": "efgh", "__alertImageToken__": "image-with-url"},
+		//		},
+		//	}},
+		//	expectedMessage: &slackMessage{
+		//		Channel:   "#test",
+		//		Username:  "Grafana",
+		//		IconEmoji: ":emoji:",
+		//		Attachments: []attachment{
+		//			{
+		//				Title:      "[FIRING:1]  (val1)",
+		//				TitleLink:  "http://localhost/alerting/list",
+		//				Text:       "**Firing**\n\nValue: [no value]\nLabels:\n - alertname = alert1\n - lbl1 = val1\nAnnotations:\n - ann1 = annv1\nSilence: http://localhost/alerting/silence/new?alertmanager=grafana&matcher=alertname%3Dalert1&matcher=lbl1%3Dval1\nDashboard: http://localhost/d/abcd\nPanel: http://localhost/d/abcd?viewPanel=efgh\n",
+		//				Fallback:   "[FIRING:1]  (val1)",
+		//				Fields:     nil,
+		//				Footer:     "Grafana v" + appVersion,
+		//				FooterIcon: "https://grafana.com/static/assets/img/fav32.png",
+		//				Color:      "#D63232",
+		//				ImageURL:   "https://www.example.com/test.png",
+		//			},
+		//		},
+		//	},
+		//}, {
+		//	name: "Message is sent and image on local disk is ignored",
+		//	settings: Config{
+		//		EndpointURL:    APIURL,
+		//		URL:            "https://example.com/hooks/xxxx",
+		//		Token:          "",
+		//		Recipient:      "#test",
+		//		Text:           templates.DefaultMessageEmbed,
+		//		Title:          templates.DefaultMessageTitleEmbed,
+		//		Username:       "Grafana",
+		//		IconEmoji:      ":emoji:",
+		//		IconURL:        "",
+		//		MentionChannel: "",
+		//		MentionUsers:   nil,
+		//		MentionGroups:  nil,
+		//	},
+		//	alerts: []*types.Alert{{
+		//		Alert: model.Alert{
+		//			Labels:      model.LabelSet{"alertname": "alert1", "lbl1": "val1"},
+		//			Annotations: model.LabelSet{"ann1": "annv1", "__dashboardUid__": "abcd", "__panelId__": "efgh", "__alertImageToken__": "image-on-disk"},
+		//		},
+		//	}},
+		//	expectedMessage: &slackMessage{
+		//		Channel:   "#test",
+		//		Username:  "Grafana",
+		//		IconEmoji: ":emoji:",
+		//		Attachments: []attachment{
+		//			{
+		//				Title:      "[FIRING:1]  (val1)",
+		//				TitleLink:  "http://localhost/alerting/list",
+		//				Text:       "**Firing**\n\nValue: [no value]\nLabels:\n - alertname = alert1\n - lbl1 = val1\nAnnotations:\n - ann1 = annv1\nSilence: http://localhost/alerting/silence/new?alertmanager=grafana&matcher=alertname%3Dalert1&matcher=lbl1%3Dval1\nDashboard: http://localhost/d/abcd\nPanel: http://localhost/d/abcd?viewPanel=efgh\n",
+		//				Fallback:   "[FIRING:1]  (val1)",
+		//				Fields:     nil,
+		//				Footer:     "Grafana v" + appVersion,
+		//				FooterIcon: "https://grafana.com/static/assets/img/fav32.png",
+		//				Color:      "#D63232",
+		//			},
+		//		},
+		//	},
+		//}
 	}
 
 	for _, test := range tests {
@@ -574,7 +574,7 @@ func (s *doorayRequestRecorder) fn(_ context.Context, r *http.Request, _ logging
 //	}
 func setupDoorayForTests(t *testing.T, settings Config) (*Notifier, *doorayRequestRecorder, error) {
 	tmpl := templates.ForTests(t)
-	externalURL, err := url.Parse("http://localhost")
+	externalURL, err := url.Parse("https://nhnent.dooray.com/services/3036349505739914786/3200968459962558160/WVTXtB-pT3egHjsrssgC2Q")
 	require.NoError(t, err)
 	tmpl.ExternalURL = externalURL
 

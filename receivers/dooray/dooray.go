@@ -53,7 +53,8 @@ type sendFunc func(ctx context.Context, req *http.Request, logger logging.Logger
 
 // Notify send an alert notification to Dooray
 func (dr *Notifier) Notify(ctx context.Context, as ...*types.Alert) (bool, error) {
-	dr.log.Debug("executing Dooray notification", "notification", dr.Name)
+	dr.log.Warn("executing Dooray notification", "notification", dr.Name)
+	fmt.Println("executing Dooray notification", "notification", dr.Name)
 
 	body := dr.buildMessage(ctx, as...)
 
