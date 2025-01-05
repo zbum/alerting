@@ -1,16 +1,13 @@
 package notify
 
 import (
-	"bytes"
 	"context"
-	tmplhtml "html/template"
-	"path/filepath"
+	"net/url"
 	tmpltext "text/template"
 
+	"github.com/go-kit/log/level"
 	"github.com/grafana/alerting/templates"
-	"github.com/prometheus/alertmanager/notify"
 	"github.com/prometheus/alertmanager/template"
-	"github.com/prometheus/common/model"
 )
 
 type TestTemplatesConfigBodyParams struct {
@@ -20,32 +17,32 @@ type TestTemplatesConfigBodyParams struct {
 	// Template string to test.
 	Template string
 
-	// Name of the template file.
+	// Name of the template.
 	Name string
 }
 
 type TestTemplatesResults struct {
-	Results []TestTemplatesResult
-	Errors  []TestTemplatesErrorResult
+	Results []TestTemplatesResult      `json:"results"`
+	Errors  []TestTemplatesErrorResult `json:"errors"`
 }
 
 type TestTemplatesResult struct {
 	// Name of the associated template definition for this result.
-	Name string
+	Name string `json:"name"`
 
 	// Interpolated value of the template.
-	Text string
+	Text string `json:"text"`
 }
 
 type TestTemplatesErrorResult struct {
 	// Name of the associated template for this error. Will be empty if the Kind is "invalid_template".
-	Name string
+	Name string `json:"name"`
 
 	// Kind of template error that occurred.
-	Kind TemplateErrorKind
+	Kind TemplateErrorKind `json:"kind"`
 
 	// Error cause.
-	Error error
+	Error string `json:"error"`
 }
 
 type TemplateErrorKind string
@@ -64,71 +61,36 @@ const (
 // TestTemplate tests the given template string against the given alerts. Existing templates are used to provide context for the test.
 // If an existing template of the same filename as the one being tested is found, it will not be used as context.
 func (am *GrafanaAlertmanager) TestTemplate(ctx context.Context, c TestTemplatesConfigBodyParams) (*TestTemplatesResults, error) {
-	definitions, err := parseTestTemplate(c.Name, c.Template)
-	if err != nil {
-		return &TestTemplatesResults{
-			Errors: []TestTemplatesErrorResult{{
-				Kind:  InvalidTemplate,
-				Error: err,
-			}},
-		}, nil
-	}
+	am.reloadConfigMtx.RLock()
+	tmpls := make([]templates.TemplateDefinition, len(am.templates))
+	copy(tmpls, am.templates)
+	am.reloadConfigMtx.RUnlock()
 
-	// Recreate the current template without the definition blocks that are being tested. This is so that any blocks that were removed don't get defined.
-	paths := make([]string, 0)
-	for _, name := range am.templates {
-		if name == c.Name {
-			// Skip the existing template of the same name as we're going to parse the one for testing instead.
+	return TestTemplate(ctx, c, tmpls, am.ExternalURL(), am.logger)
+}
+
+func (am *GrafanaAlertmanager) GetTemplate() (*template.Template, error) {
+	am.reloadConfigMtx.RLock()
+
+	seen := make(map[string]struct{})
+	tmpls := make([]string, 0, len(am.templates))
+	for _, tc := range am.templates {
+		if _, ok := seen[tc.Name]; ok {
+			level.Warn(am.logger).Log("msg", "template with same name is defined multiple times, skipping...", "template_name", tc.Name)
 			continue
 		}
-		paths = append(paths, filepath.Join(am.workingDirectory, name))
+		tmpls = append(tmpls, tc.Template)
+		seen[tc.Name] = struct{}{}
 	}
 
-	// Parse current templates.
-	var newTextTmpl *tmpltext.Template
-	var captureTemplate template.Option = func(text *tmpltext.Template, _ *tmplhtml.Template) {
-		newTextTmpl = text
-	}
-	newTmpl, err := am.TemplateFromPaths(paths, captureTemplate)
+	am.reloadConfigMtx.RUnlock()
+
+	tmpl, err := templateFromContent(tmpls, am.ExternalURL())
 	if err != nil {
 		return nil, err
 	}
 
-	// Parse test template.
-	_, err = newTextTmpl.New(c.Name).Parse(c.Template)
-	if err != nil {
-		// This shouldn't happen since we already parsed the template above.
-		return nil, err
-	}
-
-	// Prepare the context.
-	alerts := OpenAPIAlertsToAlerts(c.Alerts)
-	ctx = notify.WithReceiverName(ctx, DefaultReceiverName)
-	ctx = notify.WithGroupLabels(ctx, model.LabelSet{DefaultGroupLabel: DefaultGroupLabelValue})
-
-	promTmplData := notify.GetTemplateData(ctx, newTmpl, alerts, am.logger)
-	data := templates.ExtendData(promTmplData, am.logger)
-
-	// Iterate over each definition in the template and evaluate it.
-	var results TestTemplatesResults
-	for _, def := range definitions {
-		var buf bytes.Buffer
-		err := newTextTmpl.ExecuteTemplate(&buf, def, data)
-		if err != nil {
-			results.Errors = append(results.Errors, TestTemplatesErrorResult{
-				Name:  def,
-				Kind:  ExecutionError,
-				Error: err,
-			})
-		} else {
-			results.Results = append(results.Results, TestTemplatesResult{
-				Name: def,
-				Text: buf.String(),
-			})
-		}
-	}
-
-	return &results, nil
+	return tmpl, nil
 }
 
 // parseTestTemplate parses the test template and returns the top-level definitions that should be interpolated as results.
@@ -144,4 +106,18 @@ func parseTestTemplate(name string, text string) ([]string, error) {
 	}
 
 	return topLevel, nil
+}
+
+// TemplateFromContent returns a *Template based on defaults and the provided template contents.
+func templateFromContent(tmpls []string, externalURL string, options ...template.Option) (*templates.Template, error) {
+	tmpl, err := templates.FromContent(tmpls, options...)
+	if err != nil {
+		return nil, err
+	}
+	extURL, err := url.Parse(externalURL)
+	if err != nil {
+		return nil, err
+	}
+	tmpl.ExternalURL = extURL
+	return tmpl, nil
 }

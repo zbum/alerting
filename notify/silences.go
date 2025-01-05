@@ -1,14 +1,19 @@
 package notify
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
+	"io"
 	"time"
 
 	"github.com/go-kit/log/level"
+	"github.com/matttproud/golang_protobuf_extensions/pbutil"
+
 	v2 "github.com/prometheus/alertmanager/api/v2"
 	amv2 "github.com/prometheus/alertmanager/api/v2/models"
 	"github.com/prometheus/alertmanager/silence"
+	"github.com/prometheus/alertmanager/silence/silencepb"
 )
 
 var (
@@ -89,28 +94,53 @@ func (am *GrafanaAlertmanager) CreateSilence(ps *PostableSilence) (string, error
 			ErrCreateSilenceBadPayload.Error(), err)
 	}
 
+	if err := am.validateSilence(sil); err != nil {
+		return "", err
+	}
+
+	if err := am.silences.Set(sil); err != nil {
+		level.Error(am.logger).Log("msg", "unable to save silence", "err", err)
+		return "", fmt.Errorf("unable to save silence: %s: %w", err.Error(), ErrCreateSilenceBadPayload)
+	}
+
+	return sil.Id, nil
+}
+
+// UpsertSilence allows for the creation of a silence with a pre-set ID.
+func (am *GrafanaAlertmanager) UpsertSilence(ps *PostableSilence) (string, error) {
+	sil, err := v2.PostableSilenceToProto(ps)
+	if err != nil {
+		level.Error(am.logger).Log("msg", "marshaling to protobuf failed", "err", err)
+		return "", fmt.Errorf("%s: failed to convert API silence to internal silence: %w",
+			ErrCreateSilenceBadPayload.Error(), err)
+	}
+
+	if err := am.validateSilence(sil); err != nil {
+		return "", err
+	}
+
+	if err := am.silences.Upsert(sil); err != nil {
+		level.Error(am.logger).Log("msg", "unable to upsert silence", "err", err)
+		return "", fmt.Errorf("unable to upsert silence: %s: %w", err.Error(), ErrCreateSilenceBadPayload)
+	}
+
+	return sil.Id, nil
+}
+
+func (am *GrafanaAlertmanager) validateSilence(sil *silencepb.Silence) error {
 	if sil.StartsAt.After(sil.EndsAt) || sil.StartsAt.Equal(sil.EndsAt) {
 		msg := "start time must be before end time"
 		level.Error(am.logger).Log("msg", msg, "err", "starts_at", sil.StartsAt, "ends_at", sil.EndsAt)
-		return "", fmt.Errorf("%s: %w", msg, ErrCreateSilenceBadPayload)
+		return fmt.Errorf("%s: %w", msg, ErrCreateSilenceBadPayload)
 	}
 
 	if sil.EndsAt.Before(time.Now()) {
 		msg := "end time can't be in the past"
 		level.Error(am.logger).Log("msg", msg, "ends_at", sil.EndsAt)
-		return "", fmt.Errorf("%s: %w", msg, ErrCreateSilenceBadPayload)
+		return fmt.Errorf("%s: %w", msg, ErrCreateSilenceBadPayload)
 	}
 
-	silenceID, err := am.silences.Set(sil)
-	if err != nil {
-		level.Error(am.logger).Log("msg", "unable to save silence", "err", err)
-		if errors.Is(err, silence.ErrNotFound) {
-			return "", ErrSilenceNotFound
-		}
-		return "", fmt.Errorf("unable to save silence: %s: %w", err.Error(), ErrCreateSilenceBadPayload)
-	}
-
-	return silenceID, nil
+	return nil
 }
 
 // DeleteSilence looks for and expires the silence by the provided silenceID. It returns ErrSilenceNotFound if the silence is not present.
@@ -123,4 +153,54 @@ func (am *GrafanaAlertmanager) DeleteSilence(silenceID string) error {
 	}
 
 	return nil
+}
+
+func (am *GrafanaAlertmanager) SilenceState() (SilenceState, error) {
+	r, w := io.Pipe()
+	go func() {
+		_, err := am.silences.Snapshot(w)
+		_ = w.CloseWithError(err)
+	}()
+
+	// Trade-off between type safety and performance ahead.
+	// This is a bit awkward as we marshalled the silence just to unmarshalling it again. We could keep the return value
+	// as (string, error) and return the string directly as, for now, callers just needs the string itself.
+	/// However, this would remove type safety on the interface, forcing the caller to trust the AM implementation to
+	// always return a consistent type or to perform the unmarshalling themselves.
+	return DecodeState(r)
+}
+
+// SilenceState copied from state in prometheus-alertmanager/silence/silence.go.
+type SilenceState map[string]*silencepb.MeshSilence
+
+func (s SilenceState) MarshalBinary() ([]byte, error) {
+	var buf bytes.Buffer
+
+	for _, e := range s {
+		if _, err := pbutil.WriteDelimited(&buf, e); err != nil {
+			return nil, err
+		}
+	}
+	return buf.Bytes(), nil
+}
+
+// DecodeState copied from decodeState in prometheus-alertmanager/silence/silence.go.
+func DecodeState(r io.Reader) (SilenceState, error) {
+	st := SilenceState{}
+	for {
+		var s silencepb.MeshSilence
+		_, err := pbutil.ReadDelimited(r, &s)
+		if err == nil {
+			if s.Silence == nil {
+				return nil, silence.ErrInvalidState
+			}
+			st[s.Silence.Id] = &s
+			continue
+		}
+		if errors.Is(err, io.EOF) {
+			break
+		}
+		return nil, err
+	}
+	return st, nil
 }
