@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/prometheus/alertmanager/types"
-	"net/http"
 	"net/url"
 	"path"
 
@@ -21,7 +20,6 @@ type Notifier struct {
 	log      logging.Logger
 	ns       receivers.WebhookSender
 	tmpl     *templates.Template
-	sendFn   sendFunc
 	settings Config
 }
 
@@ -35,6 +33,7 @@ func New(cfg Config, meta receivers.Metadata, template *templates.Template, send
 	}
 }
 
+// Dooray WebHook Request structure
 type doorayMessage struct {
 	BotName      string       `json:"botName"`
 	BotIconImage string       `json:"botIconImage"`
@@ -49,19 +48,18 @@ type attachment struct {
 	Color     string `json:"color"`
 }
 
-type sendFunc func(ctx context.Context, req *http.Request, logger logging.Logger) (string, error)
-
-// Notify send an alert notification to Dooray
+// Notify send a webhook notification to Dooray
 func (dr *Notifier) Notify(ctx context.Context, as ...*types.Alert) (bool, error) {
-	dr.log.Warn("executing Dooray notification", "notification", dr.Name)
-	fmt.Println("executing Dooray notification", "notification", dr.Name)
+	dr.log.Debug("executing Dooray notification", "notification", dr.Name)
 
-	body := dr.buildMessage(ctx, as...)
+	body, err := dr.buildMessage(ctx, as...)
+	if err != nil {
+		return false, fmt.Errorf("failed to build message: %w", err)
+	}
 
 	form := url.Values{}
 	form.Add("message", body)
 
-	// https://helpdesk.dooray.com/share/pages/9wWo-xwiR66BO5LGshgVTg/2900079844453730084
 	req := &doorayMessage{
 		BotName:      dr.settings.Title,
 		BotIconImage: dr.settings.IconURL,
@@ -95,11 +93,14 @@ func (dr *Notifier) SendResolved() bool {
 	return !dr.GetDisableResolveMessage()
 }
 
-func (dr *Notifier) buildMessage(ctx context.Context, as ...*types.Alert) string {
+func (dr *Notifier) buildMessage(ctx context.Context, as ...*types.Alert) (string, error) {
 	ruleURL := path.Join(dr.tmpl.ExternalURL.String(), "/alerting/list")
 
 	var tmplErr error
 	tmpl, _ := templates.TmplText(ctx, dr.tmpl, as, dr.log, &tmplErr)
+	if tmplErr != nil {
+		dr.log.Warn("failed to build Dooray message", "error", tmplErr.Error())
+	}
 
 	body := fmt.Sprintf(
 		"%s\n%s\n\n%s",
@@ -110,5 +111,5 @@ func (dr *Notifier) buildMessage(ctx context.Context, as ...*types.Alert) string
 	if tmplErr != nil {
 		dr.log.Warn("failed to template Dooray message", "error", tmplErr.Error())
 	}
-	return body
+	return body, nil
 }

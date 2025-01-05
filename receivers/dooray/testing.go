@@ -4,6 +4,7 @@ package dooray
 const FullValidConfigForTesting = `{
 	"url": "test", 
 	"title": "test-title", 
+	"iconUrl": "http://localhost/favicon.ico",
 	"description": "test-description" 
 }`
 
