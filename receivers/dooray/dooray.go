@@ -52,7 +52,7 @@ type attachment struct {
 func (dr *Notifier) Notify(ctx context.Context, as ...*types.Alert) (bool, error) {
 	dr.log.Debug("executing Dooray notification", "notification", dr.Name)
 
-	body, err := dr.buildMessage(ctx, as...)
+	title, body, err := dr.buildMessage(ctx, as...)
 	if err != nil {
 		return false, fmt.Errorf("failed to build message: %w", err)
 	}
@@ -61,7 +61,7 @@ func (dr *Notifier) Notify(ctx context.Context, as ...*types.Alert) (bool, error
 	form.Add("message", body)
 
 	req := &doorayMessage{
-		BotName:      dr.settings.Title,
+		BotName:      title,
 		BotIconImage: dr.settings.IconURL,
 		Text:         body,
 	}
@@ -93,7 +93,7 @@ func (dr *Notifier) SendResolved() bool {
 	return !dr.GetDisableResolveMessage()
 }
 
-func (dr *Notifier) buildMessage(ctx context.Context, as ...*types.Alert) (string, error) {
+func (dr *Notifier) buildMessage(ctx context.Context, as ...*types.Alert) (string, string, error) {
 	ruleURL := path.Join(dr.tmpl.ExternalURL.String(), "/alerting/list")
 
 	var tmplErr error
@@ -102,14 +102,15 @@ func (dr *Notifier) buildMessage(ctx context.Context, as ...*types.Alert) (strin
 		dr.log.Warn("failed to build Dooray message", "error", tmplErr.Error())
 	}
 
+	title := tmpl(dr.settings.Title)
 	body := fmt.Sprintf(
 		"%s\n%s\n\n%s",
-		tmpl(dr.settings.Title),
+		title,
 		ruleURL,
 		tmpl(dr.settings.Description),
 	)
 	if tmplErr != nil {
 		dr.log.Warn("failed to template Dooray message", "error", tmplErr.Error())
 	}
-	return body, nil
+	return title, body, nil
 }
